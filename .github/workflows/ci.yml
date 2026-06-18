@@ -1,0 +1,63 @@
+name: Zulu CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18.1
+        env:
+          POSTGRES_USER: zulu
+          POSTGRES_PASSWORD: zulu_dev_password
+          POSTGRES_DB: zulu
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U zulu -d zulu"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:8.4
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24.14.1"
+          cache: npm
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.10.12"
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Install Python dependencies
+        run: uv sync --locked
+      - name: Frontend lint, typecheck, tests, build
+        run: npm run check:web
+      - name: Backend lint, typecheck, tests
+        run: npm run check:py
+      - name: Migration validation
+        run: npm run migrations:validate
+      - name: Docker Compose config validation
+        run: npm run compose:config
+      - name: Docker build validation
+        run: npm run docker:build
+      - name: Dependency audit
+        run: npm run security:audit
+      - name: Secret scan
+        run: npm run security:secrets
+      - name: Final anti-regression gate
+        run: npm run release:anti-regression

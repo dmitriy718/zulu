@@ -1,0 +1,41 @@
+{
+  "name": "zulu",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zulu monorepo for stocks/options trading intelligence and risk-governed automation.",
+  "workspaces": [
+    "apps/web"
+  ],
+  "overrides": {
+    "next": {
+      "postcss": "8.5.15"
+    },
+    "postcss": "8.5.15"
+  },
+  "engines": {
+    "node": ">=24.14.1",
+    "npm": ">=11.11.0"
+  },
+  "scripts": {
+    "dev:web": "npm --workspace apps/web run dev",
+    "build:web": "npm --workspace apps/web run build",
+    "lint:web": "npm --workspace apps/web run lint",
+    "typecheck:web": "npm --workspace apps/web run typecheck",
+    "test:web": "npm --workspace apps/web run test",
+    "format:web": "npm --workspace apps/web run format",
+    "check:web": "npm --workspace apps/web run check",
+    "lint:py": "uv run ruff check .",
+    "format:py": "uv run ruff format .",
+    "typecheck:py": "uv run mypy services packages tests",
+    "test:py": "uv run pytest",
+    "check:py": "npm run format:py && npm run lint:py && npm run typecheck:py && npm run test:py",
+    "migrations:validate": "uv run python infra/scripts/validate_migrations.py",
+    "compose:config": "docker compose -f infra/docker-compose.yml config",
+    "docker:build": "docker compose -f infra/docker-compose.yml build",
+    "security:audit": "npm audit --audit-level=high && uv pip check",
+    "security:secrets": "uv run python scripts/secret_scan.py",
+    "release:anti-regression": "uv run python scripts/final_anti_regression.py",
+    "release:verify": "npm run check && npm run migrations:validate && npm run security:audit && npm run security:secrets && npm run release:anti-regression",
+    "check": "npm run check:web && npm run check:py && npm run compose:config"
+  }
+}

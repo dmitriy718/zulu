@@ -1,0 +1,123 @@
+name: zulu
+
+services:
+  postgres:
+    image: postgres:18.1
+    environment:
+      POSTGRES_USER: zulu
+      POSTGRES_PASSWORD: zulu_dev_password
+      POSTGRES_DB: zulu
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zulu -d zulu"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8.4
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.python
+    env_file:
+      - ../.env.example
+    environment:
+      ZULU_DATABASE_URL: postgresql+psycopg://zulu:zulu_dev_password@postgres:5432/zulu
+      ZULU_REDIS_URL: redis://redis:6379/0
+      ZULU_LIVE_TRADING_ENABLED: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    environment:
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_ZULU_API_BASE_URL: http://localhost:8000
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r => { if (!r.ok) process.exit(1) })",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  signal-intelligence:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.python
+    command: ["python", "-m", "zulu_signal_intelligence"]
+    env_file:
+      - ../.env.example
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  execution:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.python
+    command: ["python", "-m", "zulu_execution"]
+    env_file:
+      - ../.env.example
+    environment:
+      ZULU_LIVE_TRADING_ENABLED: "false"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  learning:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.python
+    command: ["python", "-m", "zulu_learning"]
+    env_file:
+      - ../.env.example
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  redis-data:

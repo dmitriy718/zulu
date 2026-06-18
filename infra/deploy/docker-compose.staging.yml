@@ -1,0 +1,51 @@
+name: zulu-staging
+
+services:
+  api:
+    image: ${ZULU_API_IMAGE:?set by CI}
+    env_file:
+      - ../env/staging.env.example
+    environment:
+      ZULU_LIVE_TRADING_ENABLED: "false"
+    command: ["python", "-m", "zulu_api"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=3).read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    image: ${ZULU_WEB_IMAGE:?set by CI}
+    environment:
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+      NEXT_PUBLIC_ZULU_API_BASE_URL: ${NEXT_PUBLIC_ZULU_API_BASE_URL:?set by environment}
+    depends_on:
+      api:
+        condition: service_healthy
+
+  signal-intelligence:
+    image: ${ZULU_API_IMAGE:?set by CI}
+    env_file:
+      - ../env/staging.env.example
+    command: ["python", "-m", "zulu_signal_intelligence"]
+
+  execution:
+    image: ${ZULU_API_IMAGE:?set by CI}
+    env_file:
+      - ../env/staging.env.example
+    environment:
+      ZULU_LIVE_TRADING_ENABLED: "false"
+    command: ["python", "-m", "zulu_execution"]
+
+  learning:
+    image: ${ZULU_API_IMAGE:?set by CI}
+    env_file:
+      - ../env/staging.env.example
+    command: ["python", "-m", "zulu_learning"]
