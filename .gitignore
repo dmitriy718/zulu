@@ -1,0 +1,40 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Local databases and runtime state
+*.sqlite
+*.sqlite3
+*.db
+postgres-data/
+redis-data/
+
+# Local dependencies and generated outputs
+node_modules/
+dist/
+build/
+coverage/
+test-results/
+playwright-report/
+backups/
+.next/
+*.tsbuildinfo
+.pyre/
+.coverage
+htmlcov/
+.turbo/
+.cache/
+
+# Python and editor local state
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+*.egg-info/
+.idea/
+.vscode/
+
+# Reference-only material must never become part of Zulu.
+.reference/

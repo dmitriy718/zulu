@@ -1,0 +1,17 @@
+.git/
+.env
+.env.*
+.reference/
+node_modules/
+dist/
+build/
+coverage/
+test-results/
+playwright-report/
+backups/
+.next/
+.venv/
+postgres-data/
+redis-data/
+__pycache__/
+.pytest_cache/
